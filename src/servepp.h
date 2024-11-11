@@ -17,6 +17,19 @@
 
 namespace servepp
 {   
-    void init_server(std::string_view& address, int port);
+    class Server {
+    public:
+        void init_server(const char* address, int port);
+        void listen_server();
+
+        void send_buffer(char* buffer);
+        void recieve_buffer(char* buffer);
+
+        Server();
+        Server(const Server&) = delete;
+    
+        SOCKET serverSocket;
+        SOCKET acceptSocket;
+    };
 }
 

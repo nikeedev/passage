@@ -5,7 +5,13 @@
 
 namespace servepp
 {
-	void init_server(std::string_view &address, int port)
+	Server::Server()
+		: serverSocket(INVALID_SOCKET), acceptSocket(INVALID_SOCKET)
+	{
+		// Any additional initialization can be added here
+	}
+
+	void Server::init_server(const char *address, int port)
 	{
 		WSADATA wsaData;
 		int wsaerr;
@@ -14,31 +20,30 @@ namespace servepp
 		// WSAStartup resturns 0 if it is successfull or non zero if failed
 		if (wsaerr != 0)
 		{
-			std::cout << "The Winsock dll not found!" << endl;
-			return 0;
+			fmt::println("The Winsock dll not found!");
+			exit(0);
 		}
 		else
 		{
-			cout << "The Winsock dll found" << endl;
-			cout << "The status: " << wsaData.szSystemStatus << endl;
+			fmt::println("The Winsock dll found");
+			fmt::println("The status: ", wsaData.szSystemStatus);
 		}
 
 		/*
 		refer ServerCreation.md
 		*/
-		SOCKET serverSocket;
 		serverSocket = INVALID_SOCKET; // initializing as a inivalid socket
 		serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		// check if creating socket is successfull or not
 		if (serverSocket == INVALID_SOCKET)
 		{
-			cout << "Error at socket():" << WSAGetLastError() << endl;
+			fmt::println("Error at socket(): {}", WSAGetLastError());
 			WSACleanup();
-			return 0;
+			exit(0);
 		}
 		else
 		{
-			cout << "socket is OK!" << endl;
+			fmt::println("socket is OK!");
 		}
 
 		/*
@@ -47,22 +52,82 @@ namespace servepp
 		*/
 		sockaddr_in service; // initialising service as sockaddr_in structure
 		service.sin_family = AF_INET;
-		// InetPton(AF_INET, _T("127.0.0.1"), &service.sin_addr.s_addr);
-		// InetPton function is encountering an issue, so replaced with the following line which uses inet_addr to convert IP address string to the binary form (only for ipv4) and storing it
-		service.sin_addr.s_addr = inet_addr("127.0.0.1");
+		if (InetPton(AF_INET, address, &service.sin_addr) != 1)
+		{
+			fmt::println("Invalid IP address: {}", address);
+			closesocket(serverSocket);
+			WSACleanup();
+			exit(0);
+		}
 		//    service.sin_addr.s_addr = inet_addr("192.168.43.42");
-		service.sin_port = htons(55555);
+		service.sin_port = htons(port);
 		// using the bind function
 		if (bind(serverSocket, (SOCKADDR *)&service, sizeof(service)) == SOCKET_ERROR)
 		{
-			cout << "bind() failed: " << WSAGetLastError() << endl;
+			fmt::println("bind() failed: {}", WSAGetLastError());
 			closesocket(serverSocket);
 			WSACleanup();
-			return 0;
+			exit(0);
 		}
 		else
 		{
-			cout << "bind() is OK!" << endl;
+			fmt::println("bind() is OK!");
 		}
+	}
+
+	void Server::listen_server()
+	{
+		// 4. Listen to incomming connections
+		if (listen(serverSocket, 1) == SOCKET_ERROR)
+		{
+			fmt::println("listen(): Error listening on socket: {}", WSAGetLastError());
+		}
+		else
+		{
+			fmt::println("listen() is OK!, I'm waiting for new connections...");
+		}
+
+		// 5. accepting incomming connections
+		acceptSocket = accept(serverSocket, NULL, NULL);
+		if (acceptSocket == INVALID_SOCKET)
+		{
+			fmt::println("accept failed: {}", WSAGetLastError());
+			WSACleanup();
+			exit(-1);
+		}
+		else
+		{
+			fmt::println("accept() is OK!");
+		}
+	}
+
+	void Server::send_buffer(char *buffer)
+	{
+		int sbyteCount = send(acceptSocket, buffer, (int)strlen(buffer), 0);
+		if (sbyteCount == SOCKET_ERROR)
+		{
+			fmt::println("Server send error: {}", WSAGetLastError());
+			exit(-1);
+		}
+		else
+		{
+			fmt::println("Server: sent {}", sbyteCount);
+		}
+		closesocket(acceptSocket);
+	}
+
+	void Server::recieve_buffer(char* buffer)
+	{
+		int rbyteCount = recv(acceptSocket, buffer, 1000, 0);
+		if (rbyteCount < 0)
+		{
+			fmt::println("Server recv error: {}", WSAGetLastError());
+			exit(0);
+		}
+		else
+		{
+			fmt::println("Received data!");
+		}
+		closesocket(acceptSocket);
 	}
 }
