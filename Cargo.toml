@@ -4,20 +4,3 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-
-[lib]
-name = "passage"
-path = "src/lib.rs"
-test = true
-doctest = true
-bench = true
-doc = true
-proc-macro = false
-harness = true
-edition = "2021"
-crate-type = ["lib"]
-required-features = []
-
-[[test]]
-name = "test"
-path = "test/main.rs"
